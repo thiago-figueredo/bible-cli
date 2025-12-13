@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import path from "path";
-import { downloadBibleTxt, start } from "../index";
+import { downloadBible, start } from "../index";
 
 describe("start", () => {
   let fetchSpy: ReturnType<typeof spyOn>;
@@ -32,7 +32,7 @@ describe("start", () => {
       })
     );
 
-    const result = await downloadBibleTxt(filePath);
+    const result = await downloadBible(filePath);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "https://raw.githubusercontent.com/mxw/grmr/master/src/finaltests/bible.txt"

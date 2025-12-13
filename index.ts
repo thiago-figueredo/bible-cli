@@ -3,6 +3,10 @@ import path from "path";
 import { Command } from "./src/command";
 
 async function createFileIfNotExists(filepath: string, content: string) {
+  if (await Bun.file(filepath).exists()) {
+    return;
+  }
+
   await mkdir(path.dirname(filepath), { recursive: true });
   await writeFile(filepath, content, "utf8");
 }
@@ -16,28 +20,34 @@ async function getBibleText(): Promise<string> {
   return await response.text();
 }
 
-export async function downloadBibleTxt(filePath: string): Promise<string> {
+export async function downloadBible(filePath: string): Promise<string> {
   const bibleTxt = await getBibleText();
-
-  await createFileIfNotExists(filePath, bibleTxt);
-
   const genesisBookStart = "The First Book of Moses:  Called Genesis\n";
 
-  return bibleTxt.startsWith(genesisBookStart)
+  let fileContent = bibleTxt.startsWith(genesisBookStart)
     ? bibleTxt
     : genesisBookStart + bibleTxt;
+
+  const endOfBibleTxt =
+    "End of the Project Gutenberg EBook of The King James Bible";
+
+  if (fileContent.includes(endOfBibleTxt)) {
+    fileContent = fileContent.slice(0, fileContent.indexOf(endOfBibleTxt));
+  }
+
+  await createFileIfNotExists(filePath, fileContent);
+
+  return fileContent;
 }
 
 export async function start(filePath: string, content: string) {
-  await createFileIfNotExists(filePath, content);
+  if (process.env.NODE_ENV !== "test") {
+    const result = await Command.run([...Bun.argv.slice(2), bibleTxt]);
+    console.log(result);
+  }
 }
 
 const filePath = path.join(process.cwd(), "data", "en", "bible.txt");
-const bibleTxt = await downloadBibleTxt(filePath);
+const bibleTxt = await downloadBible(filePath);
 
 await start(filePath, bibleTxt);
-
-if (process.env.NODE_ENV !== "test") {
-  const result = await Command.run([...Bun.argv.slice(2), bibleTxt]);
-  console.log(result);
-}

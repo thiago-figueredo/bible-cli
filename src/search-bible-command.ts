@@ -30,36 +30,67 @@ export class SearchBibleCommand<T extends string> implements Command<T> {
   }
 
   private async searchByBook(query: string): Promise<T> {
-    query = query.toLowerCase();
-
+    const lowerQuery = query.toLowerCase();
     const lowerCaseBibleText = this.bibleText.toLowerCase();
-    const bookIndex = lowerCaseBibleText.indexOf(query);
-    const nextBook =
-      BIBLE_BOOKS[BIBLE_BOOKS.map((b) => b.toLowerCase()).indexOf(query) + 1];
 
-    const nextBookIndex = match(nextBook)
-      .with(
-        P.when((nextBook) => nextBook !== undefined),
-        () => lowerCaseBibleText.indexOf(nextBook!.toLowerCase())
-      )
-      .otherwise(() => -1);
+    const book = BIBLE_BOOKS.find((b) => b.name.toLowerCase() === lowerQuery);
 
-    return await match(bookIndex)
-      .with(
-        P.when((bookIndex) => bookIndex < 0),
-        () => Promise.reject(new Error(`Book ${query} not found`))
-      )
-      .with(
-        P.when((bookIndex) => bookIndex >= 0 && nextBookIndex < 0),
-        () => Promise.resolve(this.bibleText.slice(bookIndex) as T)
-      )
-      .otherwise(() =>
-        Promise.resolve(this.bibleText.slice(bookIndex, nextBookIndex) as T)
-      );
+    if (!book) {
+      return Promise.reject(new Error(`Book ${query} not found`));
+    }
+
+    const searchName = (book.fullName || book.name).toLowerCase();
+    const bookIndex = lowerCaseBibleText.indexOf(searchName);
+
+    if (bookIndex < 0) {
+      return Promise.reject(new Error(`Book ${query} not found in text`));
+    }
+
+    const currentBookIdx = BIBLE_BOOKS.indexOf(book);
+    const nextBook = BIBLE_BOOKS[currentBookIdx + 1];
+
+    if (!nextBook) {
+      return Promise.resolve(this.bibleText.slice(bookIndex) as T);
+    }
+
+    const nextSearchName = (nextBook.fullName || nextBook.name).toLowerCase();
+    const nextBookIndex = lowerCaseBibleText.indexOf(nextSearchName);
+
+    return Promise.resolve(this.bibleText.slice(bookIndex, nextBookIndex) as T);
   }
 
   private searchByChapter(query: string): Promise<T> {
-    throw new Error("Not implemented");
+    let [bookName, chapter] = query.match(/^(.+?)\s+(\d+)$/)?.slice(1) || [];
+
+    if (!bookName) {
+      throw new Error("Book name is required");
+    }
+
+    if (!chapter) {
+      chapter = "1";
+    }
+
+    if (!Number.isInteger(Number(chapter))) {
+      throw new Error("Chapter must be a integer number");
+    }
+
+    const book = BIBLE_BOOKS.find(
+      (b) => b.name.toLowerCase() === bookName.toLowerCase()
+    );
+
+    if (!book) {
+      throw new Error(`Book ${bookName} not found`);
+    }
+
+    const bookStartIndex = this.bibleText.indexOf(book.name);
+    const bookText = this.bibleText.slice(bookStartIndex);
+
+    const chapterIndex = bookText.indexOf(`${chapter}:1`);
+
+    const nextChapter = `${Number(chapter) + 1}:1`;
+    const nextChapterIndex = bookText.indexOf(nextChapter);
+
+    return Promise.resolve(bookText.slice(chapterIndex, nextChapterIndex) as T);
   }
 
   private searchByVerse(query: string): Promise<T> {
@@ -82,16 +113,18 @@ export class SearchBibleCommand<T extends string> implements Command<T> {
     return match(query)
       .with(
         P.when((query) =>
-          BIBLE_BOOKS.map((b) => b.toLowerCase()).includes(query.toLowerCase())
+          BIBLE_BOOKS.map((b) => b.name.toLowerCase()).includes(
+            query.toLowerCase()
+          )
         ),
         () => QueryTypeEnum.Book
       )
       .with(
-        P.when((query) => query.match(/^\S+\s+\d+\:\d+$/)),
+        P.when((query) => query.match(/\s+\d+\:\d+$/)),
         () => QueryTypeEnum.Verse
       )
       .with(
-        P.when((query) => query.match(/^\S+\s+\d+$/)),
+        P.when((query) => query.match(/\s+\d+$/)),
         () => QueryTypeEnum.Chapter
       )
       .otherwise(() => QueryTypeEnum.Word);
