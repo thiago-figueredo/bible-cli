@@ -167,7 +167,6 @@ export const BIBLE_BOOKS: BibleBook[] = [
     description: "The search for meaning in life",
     firstChapter: 1,
     lastChapter: 12,
-    fullName: "The Preacher",
   }),
   BibleBook.make({
     name: "Song of Solomon",
@@ -223,7 +222,6 @@ export const BIBLE_BOOKS: BibleBook[] = [
     description: "God's faithful love despite Israel's unfaithfulness",
     firstChapter: 1,
     lastChapter: 14,
-    fullName: "The Book of Hosea",
   }),
   BibleBook.make({
     name: "Joel",
@@ -231,7 +229,6 @@ export const BIBLE_BOOKS: BibleBook[] = [
     description: "The Day of the Lord and spiritual renewal",
     firstChapter: 1,
     lastChapter: 3,
-    fullName: "The Book of Joel",
   }),
   BibleBook.make({
     name: "Amos",
@@ -246,7 +243,6 @@ export const BIBLE_BOOKS: BibleBook[] = [
     description: "Judgment on Edom",
     firstChapter: 1,
     lastChapter: 1,
-    fullName: "The Book of Obadiah",
   }),
   BibleBook.make({
     name: "Jonah",
@@ -254,7 +250,6 @@ export const BIBLE_BOOKS: BibleBook[] = [
     description: "God's mercy extends to all nations",
     firstChapter: 1,
     lastChapter: 4,
-    fullName: "The Book of Jonah",
   }),
   BibleBook.make({
     name: "Micah",
@@ -262,7 +257,6 @@ export const BIBLE_BOOKS: BibleBook[] = [
     description: "Justice, mercy, and the coming ruler",
     firstChapter: 1,
     lastChapter: 7,
-    fullName: "The Book of Micah",
   }),
   BibleBook.make({
     name: "Nahum",
@@ -277,7 +271,6 @@ export const BIBLE_BOOKS: BibleBook[] = [
     description: "Living by faith in difficult times",
     firstChapter: 1,
     lastChapter: 3,
-    fullName: "The Book of Habakkuk",
   }),
   BibleBook.make({
     name: "Zephaniah",
@@ -285,7 +278,6 @@ export const BIBLE_BOOKS: BibleBook[] = [
     description: "The Day of the Lord and restoration",
     firstChapter: 1,
     lastChapter: 3,
-    fullName: "The Book of Zephaniah",
   }),
   BibleBook.make({
     name: "Haggai",
@@ -301,7 +293,6 @@ export const BIBLE_BOOKS: BibleBook[] = [
     description: "Visions of restoration and the Messiah",
     firstChapter: 1,
     lastChapter: 14,
-    fullName: "The Book of Zechariah",
   }),
   BibleBook.make({
     name: "Malachi",
@@ -309,7 +300,6 @@ export const BIBLE_BOOKS: BibleBook[] = [
     description: "A call to covenant faithfulness",
     firstChapter: 1,
     lastChapter: 4,
-    fullName: "The Book of Malachi",
   }),
   BibleBook.make({
     name: "Matthew",

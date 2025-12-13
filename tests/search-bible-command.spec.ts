@@ -13,25 +13,30 @@ describe("SearchBibleCommand", () => {
     bibleText = await downloadBible(filePath);
   });
 
-  it("should search the bible by book", async () => {
-    const command = new SearchBibleCommand(bibleText);
-    const book = faker.helpers.arrayElement(BIBLE_BOOKS);
-    const nextBook = BIBLE_BOOKS[BIBLE_BOOKS.indexOf(book) + 1];
+  it.each(BIBLE_BOOKS)(
+    "should search the bible by book for $name",
+    async (book) => {
+      const command = new SearchBibleCommand(bibleText);
+      const result = await command.run([book.name]);
 
-    expect(nextBook).not.toBeUndefined();
+      const lowerCaseBibleText = bibleText.toLowerCase();
+      const searchName = (book.fullName || book.name).toLowerCase();
+      const bookIndex = lowerCaseBibleText.indexOf(searchName);
 
-    const searchName = book.fullName || book.name;
-    const nextSearchName = nextBook!.fullName || nextBook!.name;
+      const currentBookIdx = BIBLE_BOOKS.indexOf(book);
+      const nextBook = BIBLE_BOOKS[currentBookIdx + 1];
 
-    const expected = bibleText.slice(
-      bibleText.indexOf(searchName),
-      bibleText.indexOf(nextSearchName)
-    );
+      if (!nextBook) {
+        expect(result).toBe(bibleText.slice(bookIndex));
+        return;
+      }
 
-    const result = await command.run([book.name]);
+      const nextSearchName = (nextBook.fullName || nextBook.name).toLowerCase();
+      const nextBookIndex = lowerCaseBibleText.indexOf(nextSearchName);
 
-    expect(result).toBe(expected);
-  });
+      expect(result).toBe(bibleText.slice(bookIndex, nextBookIndex));
+    }
+  );
 
   it.each(BIBLE_BOOKS)(
     "should search the bible by chapter for $name",
@@ -44,7 +49,8 @@ describe("SearchBibleCommand", () => {
 
       const chapterNumber = faker.helpers.arrayElement(bookChapters);
       const chapter = `${chapterNumber}:1`;
-      const bookText = bibleText.slice(bibleText.indexOf(book.name));
+      const bookStartIndex = bibleText.indexOf(book.name);
+      const bookText = bibleText.slice(bookStartIndex);
       const chapterIndex = bookText.indexOf(chapter);
       const nextChapter = `${chapterNumber + 1}:1`;
       const nextChapterIndex = bookText.indexOf(nextChapter);

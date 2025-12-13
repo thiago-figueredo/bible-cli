@@ -39,8 +39,8 @@ export class SearchBibleCommand<T extends string> implements Command<T> {
       return Promise.reject(new Error(`Book ${query} not found`));
     }
 
-    const searchName = (book.fullName || book.name).toLowerCase();
-    const bookIndex = lowerCaseBibleText.indexOf(searchName);
+    let searchName = book.fullName.toLowerCase();
+    let bookIndex = lowerCaseBibleText.indexOf(searchName);
 
     if (bookIndex < 0) {
       return Promise.reject(new Error(`Book ${query} not found in text`));
