@@ -1,3 +1,5 @@
+import type { Chapter } from "../value-objects/chapter";
+
 export class BibleBook {
   public readonly fullName: string;
 
@@ -5,8 +7,7 @@ export class BibleBook {
     public readonly name: string,
     public readonly author: string,
     public readonly description: string,
-    public readonly firstChapter: number,
-    public readonly lastChapter: number,
+    public readonly chapters: Chapter[],
     fullName: string | undefined = undefined
   ) {
     this.fullName = fullName || this.name;
@@ -16,19 +17,11 @@ export class BibleBook {
     name,
     author,
     description,
-    firstChapter,
-    lastChapter,
+    chapters,
     fullName,
   }: Omit<typeof BibleBook.prototype, "fullName"> & {
     fullName?: string;
   }): BibleBook {
-    return new BibleBook(
-      name,
-      author,
-      description,
-      firstChapter,
-      lastChapter,
-      fullName
-    );
+    return new BibleBook(name, author, description, chapters, fullName);
   }
 }

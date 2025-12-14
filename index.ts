@@ -41,10 +41,12 @@ export async function downloadBible(filePath: string): Promise<string> {
 }
 
 export async function start(filePath: string, content: string) {
-  if (process.env.NODE_ENV !== "test") {
-    const result = await Command.run([...Bun.argv.slice(2), bibleTxt]);
-    console.log(result);
+  if (process.env.NODE_ENV === "test") {
+    return;
   }
+
+  const result = await Command.run([...Bun.argv.slice(2), bibleTxt]);
+  console.log(result);
 }
 
 const filePath = path.join(process.cwd(), "data", "en", "bible.txt");

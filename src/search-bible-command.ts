@@ -1,6 +1,8 @@
-import { match, P } from "ts-pattern";
 import { BIBLE_BOOKS } from "./constants/en/bible-constants";
 import type { Command } from "./contracts/command.type";
+import { BookName } from "./value-objects/book-name";
+import { Chapter } from "./value-objects/chapter";
+import { Verse } from "./value-objects/verse";
 
 export enum QueryTypeEnum {
   Book = "book",
@@ -12,28 +14,48 @@ export enum QueryTypeEnum {
 export class SearchBibleCommand<T extends string> implements Command<T> {
   constructor(private readonly bibleText: string) {}
 
-  async run(args: string[]): Promise<T> {
-    const [query] = args;
+  help(): string {
+    return `
+    Search the bible by book, chapter, verse or word.
 
-    this.validateQueryType(query);
+    Usage:
+    search <query>
 
-    const queryType = this.parseQueryType(query!.trim());
-
-    const queryStrategies = {
-      [QueryTypeEnum.Book]: () => this.searchByBook(query!),
-      [QueryTypeEnum.Chapter]: () => this.searchByChapter(query!),
-      [QueryTypeEnum.Verse]: () => this.searchByVerse(query!),
-      [QueryTypeEnum.Word]: () => this.searchByWord(query!),
-    };
-
-    return await queryStrategies[queryType]();
+    Examples:
+    search John 3:16 (verse)
+    search John 3 (chapter)
+    search John (book)
+    `;
   }
 
-  private async searchByBook(query: string): Promise<T> {
-    const lowerQuery = query.toLowerCase();
+  async run(args: string[]): Promise<T> {
+    try {
+      const queryType = this.parseQueryType(args);
+
+      const queryStrategies = {
+        [QueryTypeEnum.Book]: () => this.searchByBook(args),
+        [QueryTypeEnum.Chapter]: () => this.searchByChapter(args),
+        [QueryTypeEnum.Verse]: () => this.searchByVerse(args),
+        [QueryTypeEnum.Word]: () => this.searchByWord(args),
+      };
+
+      return await queryStrategies[queryType]();
+    } catch (error) {
+      console.error(this.help());
+      return Promise.reject(error);
+    }
+  }
+
+  private async searchByBook(args: string[]): Promise<T> {
+    const [query] = args;
+    const lowerQuery = query?.toLowerCase();
     const lowerCaseBibleText = this.bibleText.toLowerCase();
 
-    const book = BIBLE_BOOKS.find((b) => b.name.toLowerCase() === lowerQuery);
+    const bibleBookIndex = BIBLE_BOOKS.findIndex(
+      (b) => b.name.toLowerCase() === lowerQuery
+    );
+
+    const book = BIBLE_BOOKS[bibleBookIndex];
 
     if (!book) {
       return Promise.reject(new Error(`Book ${query} not found`));
@@ -46,36 +68,62 @@ export class SearchBibleCommand<T extends string> implements Command<T> {
       return Promise.reject(new Error(`Book ${query} not found in text`));
     }
 
-    const currentBookIdx = BIBLE_BOOKS.indexOf(book);
-    const nextBook = BIBLE_BOOKS[currentBookIdx + 1];
+    const nextBook = BIBLE_BOOKS[bibleBookIndex + 1];
 
-    if (!nextBook) {
-      return Promise.resolve(this.bibleText.slice(bookIndex) as T);
-    }
-
-    const nextSearchName = (nextBook.fullName || nextBook.name).toLowerCase();
-    const nextBookIndex = lowerCaseBibleText.indexOf(nextSearchName);
+    const nextSearchName = nextBook?.fullName.toLowerCase();
+    const nextBookIndex = nextSearchName
+      ? lowerCaseBibleText.indexOf(nextSearchName)
+      : this.bibleText.length;
 
     return Promise.resolve(this.bibleText.slice(bookIndex, nextBookIndex) as T);
   }
 
-  private searchByChapter(query: string): Promise<T> {
-    let [bookName, chapter] = query.match(/^(.+?)\s+(\d+)$/)?.slice(1) || [];
+  private searchByChapter(args: string[]): Promise<T> {
+    let [name, chapter] = args;
 
-    if (!bookName) {
-      throw new Error("Book name is required");
-    }
+    const bookName = BookName.make(name);
 
     if (!chapter) {
       chapter = "1";
     }
 
-    if (!Number.isInteger(Number(chapter))) {
-      throw new Error("Chapter must be a integer number");
-    }
+    const bookChapter = Chapter.make({ number: chapter });
 
     const book = BIBLE_BOOKS.find(
-      (b) => b.name.toLowerCase() === bookName.toLowerCase()
+      (b) => b.name.toLowerCase() === bookName.value.toLowerCase()
+    );
+
+    if (!book) {
+      throw new Error(`Book ${bookName.value} not found`);
+    }
+
+    const bookStartIndex = this.bibleText.indexOf(book.fullName);
+    const bookText = this.bibleText.slice(bookStartIndex);
+
+    const chapterIndex = bookText.indexOf(`${bookChapter.number}:1`);
+
+    if (!bookChapter.number) {
+      throw new Error("Chapter number is required");
+    }
+
+    const nextChapter = `${bookChapter.number + 1}:1`;
+    const nextChapterIndex = bookText.indexOf(nextChapter);
+
+    return Promise.resolve(bookText.slice(chapterIndex, nextChapterIndex) as T);
+  }
+
+  private searchByVerse(args: string[]): Promise<T> {
+    const [query] = args;
+
+    let [name, chapter, verse] =
+      query?.match(/^(.+?)\s+(\d+)\:(\d+)$/)?.slice(1) || [];
+
+    const bookName = BookName.make(name);
+    const bookChapter = Chapter.make({ number: chapter ?? "1" });
+    const bookVerse = Verse.make(verse);
+
+    const book = BIBLE_BOOKS.find(
+      (b) => b.name.toLowerCase() === bookName.value.toLowerCase()
     );
 
     if (!book) {
@@ -85,48 +133,43 @@ export class SearchBibleCommand<T extends string> implements Command<T> {
     const bookStartIndex = this.bibleText.indexOf(book.name);
     const bookText = this.bibleText.slice(bookStartIndex);
 
-    const chapterIndex = bookText.indexOf(`${chapter}:1`);
+    const verseIndex = bookText.indexOf(
+      `${bookChapter.number}:${bookVerse.value}`
+    );
 
-    const nextChapter = `${Number(chapter) + 1}:1`;
-    const nextChapterIndex = bookText.indexOf(nextChapter);
+    const nextVerse = `${chapter}:${Number(verse) + 1}`;
+    const nextVerseIndex = bookText.indexOf(nextVerse);
 
-    return Promise.resolve(bookText.slice(chapterIndex, nextChapterIndex) as T);
+    return Promise.resolve(bookText.slice(verseIndex, nextVerseIndex) as T);
   }
 
-  private searchByVerse(query: string): Promise<T> {
-    throw new Error("Not implemented");
-  }
+  private searchByWord(args: string[]): Promise<T> {
+    const [query] = args;
 
-  private searchByWord(query: string): Promise<T> {
-    throw new Error("Not implemented");
-  }
-
-  private validateQueryType(query?: string): void {
-    if (!(query as any satisfies QueryTypeEnum)) {
-      throw new Error(
-        `Query type must be one of: ${Object.values(QueryTypeEnum).join(", ")}`
-      );
+    if (!query) {
+      throw new Error("Query is required");
     }
+
+    throw new Error("Not implemented");
   }
 
-  private parseQueryType(query: string): QueryTypeEnum {
-    return match(query)
-      .with(
-        P.when((query) =>
-          BIBLE_BOOKS.map((b) => b.name.toLowerCase()).includes(
-            query.toLowerCase()
-          )
-        ),
-        () => QueryTypeEnum.Book
-      )
-      .with(
-        P.when((query) => query.match(/\s+\d+\:\d+$/)),
-        () => QueryTypeEnum.Verse
-      )
-      .with(
-        P.when((query) => query.match(/\s+\d+$/)),
-        () => QueryTypeEnum.Chapter
-      )
-      .otherwise(() => QueryTypeEnum.Word);
+  private parseQueryType(args: string[]): QueryTypeEnum {
+    const text = args.join(" ");
+    const [_, book, chapter, verse] =
+      text.match(/^(.+?)(?:\s+(\d+)(?::(\d+))?)?$/) || [];
+
+    if (verse) {
+      return QueryTypeEnum.Verse;
+    }
+
+    if (chapter) {
+      return QueryTypeEnum.Chapter;
+    }
+
+    if (book) {
+      return QueryTypeEnum.Book;
+    }
+
+    return QueryTypeEnum.Word;
   }
 }
