@@ -113,13 +113,15 @@ export class SearchBibleCommand<T extends string> implements Command<T> {
   }
 
   private searchByVerse(args: string[]): Promise<T> {
-    const [query] = args;
+    const [_, name, chapter, verse] =
+      args.join(" ").match(/^(.+?)\s+(\d+)\:(\d+)$/) || [];
 
-    let [name, chapter, verse] =
-      query?.match(/^(.+?)\s+(\d+)\:(\d+)$/)?.slice(1) || [];
+    if (!name || !chapter || !verse) {
+      throw new Error("Invalid verse query format");
+    }
 
     const bookName = BookName.make(name);
-    const bookChapter = Chapter.make({ number: chapter ?? "1" });
+    const bookChapter = Chapter.make({ number: chapter });
     const bookVerse = Verse.make(verse);
 
     const book = BIBLE_BOOKS.find(
@@ -144,19 +146,34 @@ export class SearchBibleCommand<T extends string> implements Command<T> {
   }
 
   private searchByWord(args: string[]): Promise<T> {
-    const [query] = args;
+    const [_, search] = args;
 
-    if (!query) {
-      throw new Error("Query is required");
+    if (!search) {
+      throw new Error("Search is required");
     }
 
-    throw new Error("Not implemented");
+    const lines = this.bibleText.split("\n");
+    const matches = lines.reduce((acc, line) => {
+      const searchMatch = line.toLowerCase().includes(search.toLowerCase());
+
+      if (searchMatch) {
+        acc.push(line.concat("\n"));
+      }
+
+      return acc;
+    }, [] as string[]);
+
+    return Promise.resolve(matches.join("\n") as T);
   }
 
   private parseQueryType(args: string[]): QueryTypeEnum {
     const text = args.join(" ");
     const [_, book, chapter, verse] =
       text.match(/^(.+?)(?:\s+(\d+)(?::(\d+))?)?$/) || [];
+
+    if (args.at(0) === "-w") {
+      return QueryTypeEnum.Word;
+    }
 
     if (verse) {
       return QueryTypeEnum.Verse;
@@ -166,10 +183,6 @@ export class SearchBibleCommand<T extends string> implements Command<T> {
       return QueryTypeEnum.Chapter;
     }
 
-    if (book) {
-      return QueryTypeEnum.Book;
-    }
-
-    return QueryTypeEnum.Word;
+    return QueryTypeEnum.Book;
   }
 }

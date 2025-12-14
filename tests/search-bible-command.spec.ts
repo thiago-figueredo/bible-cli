@@ -78,7 +78,7 @@ describe("SearchBibleCommand", () => {
       );
 
       const verse = `${chapterNumber}:${verseNumber}`;
-      const result = await command.run([`${book.name} ${verse}`]);
+      const result = await command.run([book.name, verse]);
 
       const bookStartIndex = bibleText.indexOf(book.name);
       const bookText = bibleText.slice(bookStartIndex);
@@ -90,4 +90,21 @@ describe("SearchBibleCommand", () => {
       expect(result).toBe(bookText.slice(verseIndex, nextVerseIndex));
     }
   );
+
+  it("should search the bible by word", async () => {
+    const command = new SearchBibleCommand(bibleText);
+    const bibleWords = bibleText.split(" ");
+    const wordIndex = faker.number.int({ min: 0, max: bibleWords.length - 1 });
+    const word = bibleWords[wordIndex]!;
+
+    expect(word).not.toBeUndefined();
+
+    const result = await command.run(["-w", word]);
+
+    result.split("\n").forEach((line) => {
+      if (line.trim()) {
+        expect(line).toMatch(new RegExp(word, "gi"));
+      }
+    });
+  });
 });
